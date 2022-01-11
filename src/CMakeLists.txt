@@ -1,0 +1,7 @@
+
+
+add_subdirectory(helpers)
+add_subdirectory(simple_templated_tensor)
+add_subdirectory(Giles_tensor)
+add_subdirectory(simple_free_tensor)
+add_subdirectory(bench)

@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.16)
+
+
+find_package(benchmark REQUIRED)
+
+
+add_executable(TensorPlayground_benchmarks)
+
+target_sources(TensorPlayground_benchmarks
+        PRIVATE
+            bench_template_tensor.cpp
+            bench_free_tensor.cpp
+        )
+
+target_link_libraries(TensorPlayground_benchmarks PRIVATE
+        benchmark::benchmark
+        benchmark::benchmark_main
+        Playground::templated_tensor
+        Playground::free_tensor
+        )
+target_compile_options(TensorPlayground_benchmarks PRIVATE -fno-omit-frame-pointer -p -pg)

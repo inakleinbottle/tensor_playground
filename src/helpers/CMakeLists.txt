@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(tensor_playground_helpers)
+
+
+
+
+add_library(TensorPlayground_helpers INTERFACE)
+target_include_directories(TensorPlayground_helpers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
+
+add_library(Playground::helpers ALIAS TensorPlayground_helpers)
