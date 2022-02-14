@@ -13,10 +13,11 @@
 #include <tensor_size_info.h>
 
 
-template <unsigned Width, unsigned Depth>
-class simple_template_tensor : std::vector<double>
+template <unsigned Width, unsigned Depth, typename Coeffs=double>
+class simple_template_tensor : std::vector<Coeffs>
 {
-    using base_type = std::vector<double>;
+protected:
+    using base_type = std::vector<Coeffs>;
 public:
 
     using base_type::operator[];
@@ -26,6 +27,7 @@ public:
     using base_type::assign;
     using base_type::data;
     using base_type::size;
+    using typename base_type::size_type;
 
     using base_type::operator=;
 
@@ -34,12 +36,12 @@ public:
     simple_template_tensor() : base_type(tensor_alg_size(Width, Depth))
     {}
 
-    simple_template_tensor(std::initializer_list<double> args) : base_type(args)
+    simple_template_tensor(std::initializer_list<Coeffs> args) : base_type(args)
     {
         base_type::resize(tensor_alg_size(Width, Depth));
     }
 
-    explicit simple_template_tensor(size_t index, double coeff=1.0) : base_type(tensor_alg_size(Width, Depth))
+    explicit simple_template_tensor(size_t index, Coeffs coeff=1.0) : base_type(tensor_alg_size(Width, Depth))
     {
         base_type::operator[](index) = coeff;
     }
@@ -304,9 +306,10 @@ public:
 
 };
 
-template <unsigned Width, unsigned Depth>
-const std::vector<size_t> simple_template_tensor<Width, Depth>::size_array = []() {
-    std::vector<size_t> result{0};
+template <unsigned Width, unsigned Depth, typename Coeffs>
+const std::vector<typename simple_template_tensor<Width, Depth, Coeffs>::size_type>
+simple_template_tensor<Width, Depth, Coeffs>::size_array = []() {
+    std::vector<typename simple_template_tensor<Width, Depth, Coeffs>::size_type> result{0};
     result.reserve(Depth+2);
     for (int i=0; i <= Depth+1; ++i)
         result.emplace_back(result.back() + power(Width, i));

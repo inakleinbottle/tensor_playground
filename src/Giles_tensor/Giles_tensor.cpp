@@ -282,7 +282,7 @@ Giles_tensor Giles_tensor::operator*(const Giles_tensor& rhs) const
 {
     Giles_tensor result(m_width, std::max(m_degree, rhs.m_degree));
     pass_through op;
-    inplace_multiplication_impl(result,
+    inplace_multiplication_impl(result, result.transposed_data,
             m_width, m_degree, rhs.m_degree,
             *this, rhs, size_array, op);
     return result;
