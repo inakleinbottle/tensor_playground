@@ -1,0 +1,376 @@
+//
+// Created by sam on 15/02/2022.
+//
+
+#ifndef TENSOR_PLAYGROUND_MUL_LEVEL_FUNC_H
+#define TENSOR_PLAYGROUND_MUL_LEVEL_FUNC_H
+
+#include "implementation.h"
+#include <tile.h>
+#include <strided_rw.h>
+#include <index_key.h>
+#include <increasing_degree_walker.h>
+#include <decreasing_degree_walker.h>
+
+#include <utility>
+#include <type_traits>
+
+
+namespace playground {
+namespace dtl {
+
+template <unsigned... Letters>
+struct total_letters;
+
+template <unsigned FirstLetters, unsigned... Letters>
+struct total_letters<FirstLetters, Letters...>
+{
+    static constexpr size_type value = FirstLetters + total_letters<Letters...>::value;
+};
+
+template <unsigned Letter>
+struct total_letters<Letter>
+{
+    static constexpr size_type value = Letter;
+};
+
+template <>
+struct total_letters<>
+{
+    static constexpr size_type value = 0;
+};
+
+
+template <typename Coeffs, size_type Width, unsigned... TileLetters>
+struct multiplication_level_helper;
+
+
+template <typename Coeffs, size_type Width, unsigned ThisLevelLetters, unsigned... RemainingLetters>
+struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLetters...>
+{
+    static constexpr size_type tile_width = power(Width, ThisLevelLetters);
+    static constexpr size_type tile_size = tile_width*tile_width;
+    static constexpr size_type all_letters = total_letters<ThisLevelLetters, RemainingLetters...>::value;
+    static constexpr size_type remaining_letters = total_letters<RemainingLetters...>::value;
+
+    using pointer = Coeffs*;
+    using const_pointer = const Coeffs*;
+    using index_key = tensor_word::index_word<Width, size_type>;
+    using tile_type = tile<Coeffs, tile_size>;
+
+    template <unsigned Level, typename GilesTensor, typename Op>
+    static typename std::enable_if<(Level>=2*all_letters)>::type
+    do_tiled_level(
+            pointer out_ptr,
+            const GilesTensor& lhs,
+            const GilesTensor& rhs,
+            size_type middle_idx,
+            Op& op
+            ) noexcept
+    {
+
+        static constexpr auto this_tile_width = power(Width, ThisLevelLetters);
+        static constexpr auto middle_deg = Level - 2*all_letters;
+        static constexpr auto shift = power(Width, middle_deg + ThisLevelLetters);
+        using next = multiplication_level_helper<Coeffs, Width, RemainingLetters...>;
+
+        for (size_type i=0; i < this_tile_width; ++i) {
+            for (size_type j=0; j<this_tile_width; ++j) {
+                auto middle = i*shift + middle_idx*this_tile_width + j;
+                next::template do_tiled_level<2*remaining_letters>(out_ptr, lhs, rhs, middle, op);
+            }
+        }
+
+    }
+
+
+
+
+    template <unsigned Level, typename GilesTensor, typename Op>
+    static typename std::enable_if<(Level >= 2*all_letters)>::type
+    do_level(
+            pointer out_ptr,
+            const GilesTensor& lhs,
+            const GilesTensor& rhs,
+            Op& op
+            ) noexcept
+    {
+        static constexpr auto max_deg = Level-2*all_letters;
+        static constexpr auto deg_size = power(Width, max_deg);
+        static constexpr auto stride = power(Width, Level);
+
+        tile_type this_tile;
+
+        for (size_type middle_idx=0; middle_idx < deg_size; ++middle_idx) {
+            stride_read<Coeffs, stride, ThisLevelLetters, ThisLevelLetters>(
+                    static_cast<Coeffs*>(this_tile), out_ptr+middle_idx*tile_width
+            );
+
+            do_tiled_level<Level>(static_cast<pointer>(this_tile), lhs, rhs, middle_idx, op);
+
+            stride_write<Coeffs, stride, ThisLevelLetters, ThisLevelLetters>(
+                    out_ptr+middle_idx*tile_width, static_cast<const Coeffs*>(this_tile)
+            );
+
+        }
+
+
+    }
+
+};
+
+
+template <typename Coeffs, size_type Width, unsigned TileLetters>
+struct multiplication_level_helper<Coeffs, Width, TileLetters>
+{
+    using degree_type = unsigned;
+    static constexpr degree_type tile_letters = TileLetters;
+    static constexpr size_type tile_width = power(Width, TileLetters);
+    static constexpr size_type tile_size = tile_width*tile_width;
+    static constexpr degree_type all_letters = TileLetters;
+
+    using pointer = Coeffs*;
+    using const_pointer = const Coeffs*;
+    using index_key = tensor_word::index_word<Width, size_type>;
+    using tile_type = tile<Coeffs, tile_size>;
+
+
+    template <degree_type ThisLevel>
+    struct left_side_cases
+    {
+        static_assert(ThisLevel < tile_letters, "ThisLevel must be less than tile_letters");
+
+        template <typename Op>
+        void operator()(
+                tile_type& this_tile,
+                const_pointer lhs_ptr,
+                const_pointer rhs_ptr,
+                Op& op
+        ) const noexcept
+        {
+            for (index_key lkey(0); lkey<tile_width; ++lkey) {
+                auto split = lkey.template split<tile_letters - ThisLevel>();
+                auto lhs_word = split.first;
+                auto lhs_middle = split.second;
+
+                const auto& lhs_val = lhs_ptr[static_cast<size_type>(lhs_word)];
+                for (size_type j = 0; j < tile_width; ++j) {
+                    this_tile[lkey*tile_width + j] += op(lhs_val*rhs_ptr[lhs_middle*tile_width + j]);
+                }
+            }
+        }
+    };
+
+    template <degree_type ThisLevel>
+    struct right_side_cases
+    {
+        static_assert(ThisLevel<tile_letters, "ThisLevel must be less than tile_letters");
+
+        template <typename Op>
+        void operator()(
+                tile_type& this_tile,
+                const_pointer lhs_ptr,
+                const_pointer rhs_ptr,
+                Op& op
+                ) const noexcept
+        {
+            for (size_type i=0; i<tile_width; ++i) {
+                for (index_key rkey(0); rkey <tile_width; ++rkey) {
+                    auto split = rkey.template split<ThisLevel>();
+                    auto rhs_middle = split.first.reverse();
+                    auto rhs_idx = static_cast<size_type>(split.second);
+
+                    this_tile[i*tile_width + rkey] += op(lhs_ptr[rhs_middle*tile_width+i]*rhs_ptr[rhs_idx]);
+                }
+            }
+
+        }
+    };
+
+    template <degree_type ThisLevel>
+    struct middle_cases
+    {
+        template<typename Op>
+        void operator()(
+                tile_type& this_tile,
+                const_pointer lhs_ptr,
+                const_pointer rhs_ptr,
+                index_key middle_word,
+                Op& op
+        ) const noexcept
+        {
+            auto split = middle_word.template split<ThisLevel>();
+            auto lhs_middle = split.first.reverse();
+            auto rhs_middle = split.second;
+
+            for (size_type i = 0; i<tile_width; ++i) {
+                for (size_type j = 0; j<tile_width; ++j) {
+                    auto lhs_idx = lhs_middle*tile_width + i;
+                    auto rhs_idx = rhs_middle*tile_width + j;
+                    this_tile[i*tile_width+j] += op(lhs_ptr[lhs_idx]*rhs_ptr[rhs_idx]);
+                }
+            }
+
+        }
+    };
+
+
+    template<unsigned Level, typename Op>
+    static void
+    do_level_tiled(
+        tile_type& out_ptr,
+        const_pointer lhs,
+        const_pointer lhs_r,
+        const_pointer rhs,
+        index_key middle_idx,
+        index_key rmiddle_idx,
+        Op& op
+    ) noexcept
+    {
+
+
+        // Handle cases of 0*out_depth and out_depth*0
+        {
+            auto lhs_unit = lhs[0], rhs_unit = rhs[0];
+            const auto* lhs_ptr = lhs + static_cast<size_type>(middle_idx)*tile_width;
+            const auto* rhs_ptr = rhs + static_cast<size_type>(middle_idx)*tile_width;
+            static constexpr auto stride = power(Width, Level-tile_letters);
+
+            /// First do the zero*Depth and Depth*zero case
+            for (size_type i = 0; i<tile_width; ++i) {
+                for (size_type j = 0; j<tile_width; ++j) {
+                    out_ptr[i*tile_width+j] += op(lhs_unit*rhs_ptr[i*stride+j]);
+                    out_ptr[i*tile_width+j] += op(lhs_ptr[i*stride+j]*rhs_unit);
+                }
+            }
+        }
+
+        increasing_degree_walker<1, TileLetters-1, left_side_cases> left_walker;
+        increasing_degree_walker<1, TileLetters-1, right_side_cases> right_walker;
+        increasing_degree_walker<1, Level-2*TileLetters-1, middle_cases> middle_walker;
+
+        left_walker.apply(
+                out_ptr,
+                lhs_r,
+                rhs + middle_idx*tile_width,
+                op
+                );
+        middle_walker.apply(
+                out_ptr,
+                lhs_r,
+                rhs,
+                middle_idx,
+                op
+                );
+        right_walker.apply(
+                out_ptr,
+                lhs_r + rmiddle_idx*tile_width,
+                rhs,
+                op
+                );
+    }
+
+    template<unsigned Level, typename GilesTensor, typename Op>
+    static typename std::enable_if<(Level>2*all_letters)>::type
+    do_level(
+            pointer out_ptr,
+            const GilesTensor& lhs,
+            const GilesTensor& rhs,
+            Op& op
+    ) noexcept
+    {
+        static constexpr auto mid_deg = Level - 2*tile_letters;
+        static constexpr auto stride = power(Width, mid_deg);
+        index_key mid(tensor_start_of_degree(Width, mid_deg));
+        size_type max_idx(tensor_start_of_degree(Width, mid_deg+1));
+
+
+        tile_type this_tile;
+        for (; mid < max_idx; ++mid) {
+            index_key rmid = mid.reverse();
+            pointer current = out_ptr + mid*tile_width;
+            stride_read<Coeffs, stride, tile_width, tile_width>(static_cast<pointer>(this_tile), current);
+            do_level_tiled<Level>(
+                    this_tile,
+                    lhs.range_begin(),
+                    lhs.reverse_data.data(),
+                    rhs.range_begin(),
+                    mid,
+                    rmid,
+                    op);
+            stride_write<Coeffs, stride, tile_width, tile_width>(current, static_cast<const_pointer>(this_tile));
+        }
+
+        do_level<Level-1>(out_ptr, lhs, rhs, op);
+    }
+
+
+    template <degree_type ThisLevel>
+    struct untiled_outer_helper
+    {
+
+        template<degree_type LhsLevel>
+        struct untiled_inner_helper
+        {
+            template<typename Op>
+            void operator()(pointer out_ptr, const_pointer lhs_ptr, const_pointer rhs_ptr, Op& op) const noexcept
+            {
+                static constexpr degree_type rhs_level = ThisLevel - LhsLevel;
+                static constexpr size_type lhs_sod = tensor_start_of_degree(Width, LhsLevel);
+                static constexpr size_type rhs_sod = tensor_start_of_degree(Width, rhs_level);
+
+                auto* lhs_p = lhs_ptr + lhs_sod;
+                auto* rhs_p = rhs_ptr + rhs_sod;
+
+                for (std::ptrdiff_t i=0; i<power(Width, LhsLevel); ++i) {
+                    for (std::ptrdiff_t j=0; j<power(Width, rhs_level); ++j) {
+                        *(out_ptr++) += op(lhs_p[i]*rhs_p[j]);
+                    }
+                }
+
+            }
+        };
+    };
+
+
+    template<unsigned Level, typename GilesTensor, typename Op>
+    static typename std::enable_if<(Level > 0 && Level<=2*all_letters)>::type
+    do_level(
+            pointer out_ptr,
+            const GilesTensor& lhs,
+            const GilesTensor& rhs,
+            Op& op
+            ) noexcept
+    {
+        using ohelper = untiled_outer_helper<Level>;
+        decreasing_degree_walker<Level, 0, ohelper::template untiled_inner_helper> walker;
+        walker.template apply(out_ptr, lhs.range_begin(), rhs.range_begin(), op);
+        do_level<Level-1>(out_ptr, lhs, rhs, op);
+    }
+
+    template<unsigned Level, typename GilesTensor, typename Op>
+    static typename std::enable_if<(Level == 0 && Level<=2*all_letters)>::type
+    do_level(
+            pointer out_ptr,
+            const GilesTensor& lhs,
+            const GilesTensor& rhs,
+            Op& op
+            ) noexcept
+    {
+        using ohelper = untiled_outer_helper<Level>;
+        decreasing_degree_walker<Level, 0, ohelper::template untiled_inner_helper> walker;
+        walker.template apply(out_ptr, lhs.range_begin(), rhs.range_begin(), op);
+    }
+
+
+};
+
+
+
+
+
+} // namespace dtl
+} // namespace playground
+
+
+#endif //TENSOR_PLAYGROUND_MUL_LEVEL_FUNC_H

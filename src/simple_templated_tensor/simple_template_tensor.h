@@ -54,22 +54,22 @@ public:
 
     double* range_begin()
     {
-        return &*base_type::begin();
+        return base_type::data();
     }
 
     double* range_end()
     {
-        return &*base_type::end();
+        return base_type::range_begin() + base_type::size();
     }
 
     const double* range_begin() const
     {
-        return &*base_type::begin();
+        return base_type::data();
     }
 
     const double* range_end() const
     {
-        return &*base_type::end();
+        return base_type::range_begin() + base_type::size();
     }
 
 private:

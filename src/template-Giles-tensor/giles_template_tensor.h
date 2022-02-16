@@ -5,9 +5,11 @@
 #ifndef TENSOR_PLAYGROUND_GILES_TEMPLATE_TENSOR_H
 #define TENSOR_PLAYGROUND_GILES_TEMPLATE_TENSOR_H
 
+#define TENSOR_PLAYGROUND_INLINE_DEF
 
 #include <simple_template_tensor.h>
 #include "index_key.h"
+#include "mul_level_func.h"
 
 namespace playground {
 
@@ -41,8 +43,6 @@ public:
 
     coeff_container_t reverse_data;
 
-    using base_type::base_type;
-
 private:
 
     void fill_reverse_data()
@@ -55,6 +55,11 @@ private:
     }
 
 public:
+
+    giles_template_tensor() : base_type()
+    {
+        fill_reverse_data();
+    }
 
     giles_template_tensor(std::initializer_list<Coeffs> args) : base_type(args)
     {
@@ -90,6 +95,7 @@ private:
             const std::vector<size_type>& start_of_degree_array,
             Op op) noexcept
     {
+#ifdef TENSOR_PLAYGROUND_INLINE_DEF
         Coeffs tile[tile_size];
 
         for (degree_type out_depth = Depth; out_depth>2*tile_letters; --out_depth) {
@@ -104,7 +110,7 @@ private:
                     const auto* rhs_ptr = rhs.range_begin()+static_cast<size_type>(k)*tile_width;
 
                     /// First do the zero*Depth and Depth*zero case
-                    for (size_type i = 0; i<tile_width; ++i) {
+                     for (size_type i = 0; i<tile_width; ++i) {
                         for (size_type j = 0; j<tile_width; ++j) {
                             tile[i*tile_width+j] = lhs_unit*rhs_ptr[i*stride+j]+lhs_ptr[i*stride+j]*rhs_unit;
                         }
@@ -125,7 +131,7 @@ private:
                         for (index_key i = static_cast<index_key>(0); i<tile_width; ++i) {
                             auto split = i.split(tile_letters-lhs_deg);  // split is by number of right-hand letters
                             auto lhs_word = split.first;
-                            auto lhs_middle = split.second;
+                           auto lhs_middle = split.second;
 
                             const auto& lhs_val = lhs_ptr[static_cast<size_type>(lhs_word)];
                             for (index_key j = static_cast<index_key>(0); j<tile_width; ++j) {
@@ -139,17 +145,16 @@ private:
                 }
 
                 // Middle cases
-                for (degree_type split_deg=1; split_deg<tile_letters; ++split_deg) {
+                for (degree_type split_deg=1; split_deg<out_depth - 2*tile_letters - 1; ++split_deg) {
                     auto split = k.split(split_deg);
                     auto lhs_middle = split.first.reverse();
                     auto rhs_middle = split.second;
 
                     for (index_key i=static_cast<index_key>(0); i < tile_width; ++i) {
                         for (index_key j=static_cast<index_key>(0); j < tile_width; ++j) {
-                            auto lhs_idx = static_cast<size_type>(i.concatenate(lhs_middle, out_depth-split_deg));
-                            auto rhs_idx = static_cast<size_type>(rhs_middle.concatenate(j, tile_letters));
-                            tile[static_cast<size_type>(i)*tile_width + static_cast<size_type>(j)]
-                                += lhs.reverse_data[static_cast<size_type>(lhs_idx)] * rhs[static_cast<size_type>(rhs_idx)];
+                            auto lhs_idx = lhs_middle*tile_width + i;
+                            auto rhs_idx = rhs_middle*tile_width + j;
+                            tile[i*tile_width + j] += lhs.reverse_data[lhs_idx] * rhs[rhs_idx];
                         }
                     }
                 }
@@ -167,10 +172,10 @@ private:
                         for (index_key i=static_cast<index_key>(0); i<tile_width; ++i) {
                             for (index_key j=static_cast<index_key>(0); j<tile_width; ++j) {
                                 auto split = j.split(rhs_deg);
-                                auto rhs_middle = split.first;
+                                auto rhs_middle = split.first.reverse();
                                 auto rhs_word = split.second;
                                 tile[static_cast<size_type>(i)*tile_width + static_cast<size_type>(j)]
-                                    += lhs_ptr[static_cast<size_type>(i)*stride + static_cast<size_type>(rhs_middle)]*rhs_ptr[static_cast<size_type>(rhs_word)];
+                                    += lhs_ptr[rhs_middle*tile_width + i]*rhs_ptr[static_cast<size_type>(rhs_word)];
                             }
                         }
                     }
@@ -210,10 +215,13 @@ private:
                         *(out_ptr++) += op(lhs_p[i]*rhs_p[j]);
                     }
                 }
+               }
+          }
 
-            }
-        }
-
+#else
+        dtl::multiplication_level_helper<Coeffs, Width, tile_letters>::template
+                do_level<Depth>(out.range_begin(), lhs, rhs, op);
+#endif
     }
 
 public:

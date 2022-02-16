@@ -5,7 +5,7 @@ project(tensor_playground_helpers)
 
 
 
-add_library(TensorPlayground_helpers INTERFACE)
+add_library(TensorPlayground_helpers INTERFACE  increasing_degree_walker.h decreasing_degree_walker.h)
 target_include_directories(TensorPlayground_helpers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 
