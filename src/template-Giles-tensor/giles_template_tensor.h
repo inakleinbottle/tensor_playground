@@ -5,7 +5,7 @@
 #ifndef TENSOR_PLAYGROUND_GILES_TEMPLATE_TENSOR_H
 #define TENSOR_PLAYGROUND_GILES_TEMPLATE_TENSOR_H
 
-#define TENSOR_PLAYGROUND_INLINE_DEF
+//#define TENSOR_PLAYGROUND_INLINE_DEF
 
 #include <simple_template_tensor.h>
 #include "index_key.h"
@@ -34,7 +34,7 @@ public:
 
     using index_key = tensor_word::index_word<Width, size_type>;
 
-    static constexpr degree_type tile_letters = 1;
+    static constexpr degree_type tile_letters = 2;
     static constexpr size_type tile_width = power(Width, tile_letters);
     static constexpr size_type tile_size = tile_width*tile_width;
 
@@ -101,7 +101,7 @@ private:
         for (degree_type out_depth = Depth; out_depth>2*tile_letters; --out_depth) {
             const auto stride = power(Width, out_depth-tile_letters);
 
-            for (auto k = static_cast<index_key>(size_array[out_depth-2*tile_letters-1]); k<size_array[out_depth-2*tile_letters]; ++k) {
+            for (auto k = static_cast<index_key>(size_array[out_depth-2*tile_letters]); k<size_array[out_depth-2*tile_letters+1]; ++k) {
 
                 // Handle cases of 0*out_depth and out_depth*0
                 {
@@ -127,14 +127,15 @@ private:
                      * hand key
                      */
                     for (degree_type lhs_deg = 1; lhs_deg<tile_letters; ++lhs_deg) {
-                        const auto* lhs_ptr = lhs.reverse_data.data() + size_array[lhs_deg-1];
-                        for (index_key i = static_cast<index_key>(0); i<tile_width; ++i) {
-                            auto split = i.split(tile_letters-lhs_deg);  // split is by number of right-hand letters
+                        const auto* lhs_ptr = lhs.reverse_data.data() + size_array[lhs_deg];
+                        for (size_type i = 0; i<tile_width; ++i) {
+                            index_key tmp(i + size_array[lhs_deg]);
+                            auto split = tmp.split(tile_letters-lhs_deg);  // split is by number of right-hand letters
                             auto lhs_word = split.first;
-                           auto lhs_middle = split.second;
+                            auto lhs_middle = split.second;
 
                             const auto& lhs_val = lhs_ptr[static_cast<size_type>(lhs_word)];
-                            for (index_key j = static_cast<index_key>(0); j<tile_width; ++j) {
+                            for (size_type j = 0; j<tile_width; ++j) {
                                 // We've already accounted for the offset induced by the middle word k.
                                 tile[static_cast<size_type>(i)*tile_width+static_cast<size_type>(j)]
                                     += lhs_val*rhs_ptr[static_cast<size_type>(lhs_middle)*stride + static_cast<size_type>(j)];
@@ -150,8 +151,8 @@ private:
                     auto lhs_middle = split.first.reverse();
                     auto rhs_middle = split.second;
 
-                    for (index_key i=static_cast<index_key>(0); i < tile_width; ++i) {
-                        for (index_key j=static_cast<index_key>(0); j < tile_width; ++j) {
+                    for (size_type i=0; i < tile_width; ++i) {
+                        for (size_type j=0; j < tile_width; ++j) {
                             auto lhs_idx = lhs_middle*tile_width + i;
                             auto rhs_idx = rhs_middle*tile_width + j;
                             tile[i*tile_width + j] += lhs.reverse_data[lhs_idx] * rhs[rhs_idx];
@@ -169,9 +170,10 @@ private:
                      */
                     for (degree_type rhs_deg = 1; rhs_deg < tile_letters; ++rhs_deg) {
                         const auto* rhs_ptr = rhs.range_begin() + size_array[rhs_deg-1];
-                        for (index_key i=static_cast<index_key>(0); i<tile_width; ++i) {
-                            for (index_key j=static_cast<index_key>(0); j<tile_width; ++j) {
-                                auto split = j.split(rhs_deg);
+                        for (size_type i=0; i<tile_width; ++i) {
+                            for (size_type j=0; j<tile_width; ++j) {
+                                index_key tmp (j + size_array[rhs_deg]);
+                                auto split = tmp.split(rhs_deg);
                                 auto rhs_middle = split.first.reverse();
                                 auto rhs_word = split.second;
                                 tile[static_cast<size_type>(i)*tile_width + static_cast<size_type>(j)]

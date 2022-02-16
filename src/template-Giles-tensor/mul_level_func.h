@@ -11,6 +11,7 @@
 #include <index_key.h>
 #include <increasing_degree_walker.h>
 #include <decreasing_degree_walker.h>
+#include <reversing_permutation.h>
 
 #include <utility>
 #include <type_traits>
@@ -141,6 +142,26 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters>
         static_assert(ThisLevel < tile_letters, "ThisLevel must be less than tile_letters");
 
         template <typename Op>
+        void inner(
+                tile_type& this_tile,
+                const_pointer lhs_ptr,
+                const_pointer rhs_ptr,
+                Op& op,
+                size_type i1
+                ) const noexcept
+        {
+            constexpr size_type loop_bound = power(Width, ThisLevel);
+
+            for (size_type i2=0; i2<loop_bound; ++i2) {
+                auto i = i1*loop_bound + i2;
+                for (size_type j=0; j<tile_width; ++j) {
+                    this_tile[i*tile_width+j] += op(lhs_ptr[i1]*rhs_ptr[i2*tile_width+j]);
+                }
+            }
+
+        }
+
+        template <typename Op>
         void operator()(
                 tile_type& this_tile,
                 const_pointer lhs_ptr,
@@ -148,15 +169,9 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters>
                 Op& op
         ) const noexcept
         {
-            for (index_key lkey(0); lkey<tile_width; ++lkey) {
-                auto split = lkey.template split<tile_letters - ThisLevel>();
-                auto lhs_word = split.first;
-                auto lhs_middle = split.second;
-
-                const auto& lhs_val = lhs_ptr[static_cast<size_type>(lhs_word)];
-                for (size_type j = 0; j < tile_width; ++j) {
-                    this_tile[lkey*tile_width + j] += op(lhs_val*rhs_ptr[lhs_middle*tile_width + j]);
-                }
+            constexpr size_type loop_bound = power(Width, tile_letters - ThisLevel);
+            for (size_type i=0; i<loop_bound; ++i) {
+                inner(this_tile, lhs_ptr, rhs_ptr, op, i);
             }
         }
     };
@@ -167,6 +182,27 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters>
         static_assert(ThisLevel<tile_letters, "ThisLevel must be less than tile_letters");
 
         template <typename Op>
+        void inner(
+                tile_type& this_tile,
+                const_pointer lhs_ptr,
+                const_pointer rhs_ptr,
+                Op& op,
+                size_type i,
+                size_type j1
+                ) const noexcept
+        {
+            constexpr size_type loop_bound = power(Width, tile_letters - ThisLevel);
+            constexpr size_type shift = power(Width, ThisLevel);
+
+            for (size_type j2=0; j2 < loop_bound; ++j2) {
+                auto j = j1*shift + j2;
+                auto jr = ::dtl::reversing_permutation<Width, ThisLevel>::permute_idx(j2);
+                this_tile[i*tile_width + j] += op(lhs_ptr[jr*tile_width+i]*rhs_ptr[j1]);
+            }
+        }
+
+
+        template <typename Op>
         void operator()(
                 tile_type& this_tile,
                 const_pointer lhs_ptr,
@@ -174,13 +210,10 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters>
                 Op& op
                 ) const noexcept
         {
+            constexpr size_type loop_bound = power(Width, ThisLevel);
             for (size_type i=0; i<tile_width; ++i) {
-                for (index_key rkey(0); rkey <tile_width; ++rkey) {
-                    auto split = rkey.template split<ThisLevel>();
-                    auto rhs_middle = split.first.reverse();
-                    auto rhs_idx = static_cast<size_type>(split.second);
-
-                    this_tile[i*tile_width + rkey] += op(lhs_ptr[rhs_middle*tile_width+i]*rhs_ptr[rhs_idx]);
+                for (size_type j=0; j <loop_bound; ++j) {
+                    inner(this_tile, lhs_ptr, rhs_ptr, op, i, j);
                 }
             }
 
