@@ -155,6 +155,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters>
             for (size_type i2=0; i2<loop_bound; ++i2) {
                 auto i = i1*loop_bound + i2;
                 for (size_type j=0; j<tile_width; ++j) {
+                    auto ri1 = ::dtl::reversing_permutation<Width, ThisLevel>::permute_idx(i1);
                     this_tile[i*tile_width+j] += op(lhs_ptr[i1]*rhs_ptr[i2*tile_width+j]);
                 }
             }

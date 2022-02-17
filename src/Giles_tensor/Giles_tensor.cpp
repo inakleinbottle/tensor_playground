@@ -8,6 +8,7 @@
 #include <multiplication_helpers.h>
 #include <tensor_size_info.h>
 
+using namespace playground;
 namespace {
 
 using size_type = typename Giles_tensor::size_type;

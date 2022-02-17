@@ -3,6 +3,8 @@
 #include "src/simple_templated_tensor/simple_template_tensor.h"
 #include "src/simple_free_tensor/free_tensor.h"
 
+using namespace playground;
+
 int main()
 {
     free_tensor tensor1 (5, 5,  {1.0, 0.0, 2.0});
