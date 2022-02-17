@@ -8,7 +8,7 @@
 //#define TENSOR_PLAYGROUND_INLINE_DEF
 
 #include <simple_template_tensor.h>
-#include "index_key.h"
+#include "index_word.h"
 #include "mul_level_func.h"
 
 namespace playground {
@@ -32,7 +32,7 @@ public:
     using degree_type = unsigned;
     using base_type::size_array;
 
-    using index_key = tensor_word::index_word<Width, size_type>;
+    using index_key = index_word<Width, size_type>;
 
     static constexpr degree_type tile_letters = 2;
     static constexpr size_type tile_width = power(Width, tile_letters);
@@ -101,7 +101,7 @@ private:
         for (degree_type out_depth = Depth; out_depth>2*tile_letters; --out_depth) {
             const auto stride = power(Width, out_depth-tile_letters);
 
-            for (auto k = static_cast<index_key>(size_array[out_depth-2*tile_letters]); k<size_array[out_depth-2*tile_letters+1]; ++k) {
+            for (auto k = static_cast<index_word>(size_array[out_depth-2*tile_letters]); k<size_array[out_depth-2*tile_letters+1]; ++k) {
 
                 // Handle cases of 0*out_depth and out_depth*0
                 {
@@ -129,7 +129,7 @@ private:
                     for (degree_type lhs_deg = 1; lhs_deg<tile_letters; ++lhs_deg) {
                         const auto* lhs_ptr = lhs.reverse_data.data() + size_array[lhs_deg];
                         for (size_type i = 0; i<tile_width; ++i) {
-                            index_key tmp(i + size_array[lhs_deg]);
+                            index_word tmp(i + size_array[lhs_deg]);
                             auto split = tmp.split(tile_letters-lhs_deg);  // split is by number of right-hand letters
                             auto lhs_word = split.first;
                             auto lhs_middle = split.second;
@@ -172,7 +172,7 @@ private:
                         const auto* rhs_ptr = rhs.range_begin() + size_array[rhs_deg-1];
                         for (size_type i=0; i<tile_width; ++i) {
                             for (size_type j=0; j<tile_width; ++j) {
-                                index_key tmp (j + size_array[rhs_deg]);
+                                index_word tmp (j + size_array[rhs_deg]);
                                 auto split = tmp.split(rhs_deg);
                                 auto rhs_middle = split.first.reverse();
                                 auto rhs_word = split.second;

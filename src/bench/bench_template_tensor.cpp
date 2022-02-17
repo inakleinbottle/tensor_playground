@@ -5,6 +5,8 @@
 #include <benchmark/benchmark.h>
 #include <simple_template_tensor.h>
 
+using namespace playground;
+
 static void BM_templated_tensor_mul(benchmark::State& state)
 {
     simple_template_tensor<5, 8> t1{1.0, 1.0, 2.0, 3.0, 4.0, 5.0};

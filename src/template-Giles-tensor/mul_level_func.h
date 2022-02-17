@@ -8,7 +8,7 @@
 #include "implementation.h"
 #include <tile.h>
 #include <strided_rw.h>
-#include <index_key.h>
+#include <index_word.h>
 #include <increasing_degree_walker.h>
 #include <decreasing_degree_walker.h>
 #include <reversing_permutation.h>
@@ -56,7 +56,7 @@ struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLet
 
     using pointer = Coeffs*;
     using const_pointer = const Coeffs*;
-    using index_key = tensor_word::index_word<Width, size_type>;
+    using index_key = index_word<Width, size_type>;
     using tile_type = tile<Coeffs, tile_size>;
 
     template <unsigned Level, typename GilesTensor, typename Op>
@@ -132,7 +132,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters>
 
     using pointer = Coeffs*;
     using const_pointer = const Coeffs*;
-    using index_key = tensor_word::index_word<Width, size_type>;
+    using index_key = index_word<Width, size_type>;
     using tile_type = tile<Coeffs, tile_size>;
 
 
