@@ -49,8 +49,7 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
     }
 
    public:
-    giles_template_tensor() : base_type() {
-        fill_reverse_data();
+    giles_template_tensor() : base_type() , reverse_data(tensor_alg_size(Width, Depth-1)){
     }
 
     giles_template_tensor(std::initializer_list<Coeffs> args) : base_type(args) {
