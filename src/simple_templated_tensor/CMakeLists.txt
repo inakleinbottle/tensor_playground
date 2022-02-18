@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.16)
 project(simple_templated_tensor VERSION 0.0.0)
 
 
-
-
 add_library(TensorPlayground_templated_tensor INTERFACE)
 target_sources(TensorPlayground_templated_tensor
         PUBLIC

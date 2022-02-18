@@ -10,16 +10,16 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 
 target_sources(TensorPlayground_Giles_tensor
         PUBLIC
-            Giles_tensor.h
+        Giles_tensor.h
         PRIVATE
-            Giles_tensor.cpp
+        Giles_tensor.cpp
         )
 
 target_link_libraries(TensorPlayground_Giles_tensor
         PRIVATE
-            Playground::helpers
+        Playground::helpers
         PUBLIC
-            OpenMP::OpenMP_CXX)
+        OpenMP::OpenMP_CXX)
 target_include_directories(TensorPlayground_Giles_tensor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_compile_options(TensorPlayground_Giles_tensor PRIVATE -fno-omit-frame-pointer -p -pg)

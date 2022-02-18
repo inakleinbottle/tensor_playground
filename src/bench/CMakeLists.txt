@@ -8,9 +8,9 @@ add_executable(TensorPlayground_benchmarks)
 
 target_sources(TensorPlayground_benchmarks
         PRIVATE
-            bench_template_tensor.cpp
-            bench_free_tensor.cpp
-            bench_Giles_template_tensor.cpp
+        bench_template_tensor.cpp
+        bench_free_tensor.cpp
+        bench_Giles_template_tensor.cpp
         )
 
 target_link_libraries(TensorPlayground_benchmarks PRIVATE

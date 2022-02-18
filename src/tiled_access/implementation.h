@@ -13,8 +13,8 @@
 
 namespace playground {
 
-    using size_type = std::size_t;
+using size_type = std::size_t;
 
 }
 
-#endif //TENSOR_PLAYGROUND_IMPLEMENTATION_H
+#endif//TENSOR_PLAYGROUND_IMPLEMENTATION_H

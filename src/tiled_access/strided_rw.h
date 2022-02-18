@@ -19,14 +19,13 @@ namespace playground {
  * @param src Const pointer to strided source
  */
 template<typename T, size_type Stride, size_type NRows, size_type NCols>
-void stride_read(T* dst, const T* src) noexcept
-{
-    for (size_type i = 0; i<NRows; ++i) {
-        const auto* row_ptr = src+i*Stride;
-        for (size_type j = 0; j<NCols; ++j) {
-            *(dst++) = *(row_ptr++);
-        }
+void stride_read(T *dst, const T *src) noexcept {
+  for (size_type i = 0; i < NRows; ++i) {
+    const auto *row_ptr = src + i * Stride;
+    for (size_type j = 0; j < NCols; ++j) {
+      *(dst++) = *(row_ptr++);
     }
+  }
 }
 
 /**
@@ -39,17 +38,15 @@ void stride_read(T* dst, const T* src) noexcept
  * @param src Const pointer to contiguous source
  */
 template<typename T, size_type Stride, size_type NRows, size_type NCols>
-void stride_write(T* dst, const T* src) noexcept
-{
-    for (size_type i = 0; i<NRows; ++i) {
-        auto* row_ptr = dst+i*Stride;
-        for (size_type j = 0; j<NCols; ++j) {
-            *(row_ptr++) = *(src++);
-        }
+void stride_write(T *dst, const T *src) noexcept {
+  for (size_type i = 0; i < NRows; ++i) {
+    auto *row_ptr = dst + i * Stride;
+    for (size_type j = 0; j < NCols; ++j) {
+      *(row_ptr++) = *(src++);
     }
+  }
 }
 
-} // namespace playground
+}// namespace playground
 
-
-#endif //TENSOR_PLAYGROUND_STRIDED_RW_H
+#endif//TENSOR_PLAYGROUND_STRIDED_RW_H
