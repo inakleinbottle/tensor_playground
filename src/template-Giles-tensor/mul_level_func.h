@@ -228,10 +228,16 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
             /// First do the zero*Depth and Depth*zero case
             for (size_type i = 0; i < tile_width; ++i) {
                 for (size_type j = 0; j < tile_width; ++j) {
-                    out_ptr[i * tile_width + j] += op(lhs_unit * rhs_ptr[i * stride + j]);
+                    out_ptr[i * tile_width + j] = op(lhs_unit * rhs_ptr[i * stride + j]);
+                }
+            }
+            for (size_type i = 0; i < tile_width; ++i) {
+                for (size_type j = 0; j < tile_width; ++j) {
                     out_ptr[i * tile_width + j] += op(lhs_ptr[i * stride + j] * rhs_unit);
                 }
             }
+
+
         }
 
         increasing_degree_walker<1, TileLetters - 1, left_side_cases> left_walker;
@@ -272,7 +278,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
         for (; mid < max_idx; ++mid) {
             index_key rmid = mid.reverse();
             pointer current = out_ptr + mid * tile_width;
-            stride_read<Coeffs, stride, tile_width, tile_width>(static_cast<pointer>(this_tile), current);
+            //stride_read<Coeffs, stride, tile_width, tile_width>(static_cast<pointer>(this_tile), current);
             do_level_tiled<Level>(
                 this_tile,
                 lhs.range_begin(),
@@ -281,7 +287,14 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
                 mid,
                 rmid,
                 op);
-            stride_write<Coeffs, stride, tile_width, tile_width>(current, static_cast<const_pointer>(this_tile));
+
+            for (size_type i=0; i<tile_width; ++i) {
+                for (size_type j=0; j<tile_width; ++j) {
+                    out_ptr[i*stride + j] += this_tile[i*tile_width]
+                }
+            }
+
+            //stride_write<Coeffs, stride, tile_width, tile_width>(current, static_cast<const_pointer>(this_tile));
         }
 
         do_level<Level - 1>(out_ptr, lhs, rhs, op);
