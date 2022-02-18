@@ -12,32 +12,32 @@ namespace playground {
 template<unsigned Level, unsigned MinLevel, template<unsigned> class Fn, bool = (Level > MinLevel)>
 struct decreasing_degree_walker {
 
-  Fn<Level> m_fn;
+    Fn<Level> m_fn;
 
-  template<typename... Args>
-  void apply(Args &&...args) noexcept {
-    m_fn(args...);
-    increasing_degree_walker<Level - 1, MinLevel, Fn> next;
-    next.apply(std::forward<Args>(args)...);
-  }
+    template<typename... Args>
+    void apply(Args &&...args) noexcept {
+        m_fn(args...);
+        decreasing_degree_walker<Level - 1, MinLevel, Fn> next;
+        next.apply(std::forward<Args>(args)...);
+    }
 };
 
 template<unsigned MinLevel, template<unsigned> class Fn>
 struct decreasing_degree_walker<MinLevel, MinLevel, Fn, false> {
 
-  Fn<MinLevel> m_fn;
+    Fn<MinLevel> m_fn;
 
-  template<typename... Args>
-  void apply(Args &&...args) noexcept {
-    m_fn(args...);
-  }
+    template<typename... Args>
+    void apply(Args &&...args) noexcept {
+        m_fn(args...);
+    }
 };
 
 template<unsigned Level, unsigned MinLevel, template<unsigned> class Fn>
 struct decreasing_degree_walker<Level, MinLevel, Fn, false> {
 
-  template<typename... Args>
-  void apply(Args &&...) noexcept {}
+    template<typename... Args>
+    void apply(Args &&...) noexcept {}
 };
 
 }// namespace playground

@@ -20,12 +20,12 @@ namespace playground {
  */
 template<typename T, size_type Stride, size_type NRows, size_type NCols>
 void stride_read(T *dst, const T *src) noexcept {
-  for (size_type i = 0; i < NRows; ++i) {
-    const auto *row_ptr = src + i * Stride;
-    for (size_type j = 0; j < NCols; ++j) {
-      *(dst++) = *(row_ptr++);
+    for (size_type i = 0; i < NRows; ++i) {
+        const auto *row_ptr = src + i * Stride;
+        for (size_type j = 0; j < NCols; ++j) {
+            *(dst++) = *(row_ptr++);
+        }
     }
-  }
 }
 
 /**
@@ -39,12 +39,12 @@ void stride_read(T *dst, const T *src) noexcept {
  */
 template<typename T, size_type Stride, size_type NRows, size_type NCols>
 void stride_write(T *dst, const T *src) noexcept {
-  for (size_type i = 0; i < NRows; ++i) {
-    auto *row_ptr = dst + i * Stride;
-    for (size_type j = 0; j < NCols; ++j) {
-      *(row_ptr++) = *(src++);
+    for (size_type i = 0; i < NRows; ++i) {
+        auto *row_ptr = dst + i * Stride;
+        for (size_type j = 0; j < NCols; ++j) {
+            *(row_ptr++) = *(src++);
+        }
     }
-  }
 }
 
 }// namespace playground
