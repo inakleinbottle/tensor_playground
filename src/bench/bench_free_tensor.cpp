@@ -4,10 +4,12 @@
 
 #include <benchmark/benchmark.h>
 #include <free_tensor.h>
+#include "params.h"
+
 
 static void BM_free_tensor_mul(benchmark::State &state) {
-    free_tensor t1(5, 8, {1.0, 1.0, 2.0, 3.0, 4.0, 5.0});
-    free_tensor t2(5, 8, {1.0, 0.0, 2.0, -3.0, 4.0, 5.0});
+    free_tensor t1(WIDTH, DEPTH, {1.0, 1.0, 2.0, 3.0, 4.0, 5.0});
+    free_tensor t2(WIDTH, DEPTH, {1.0, 0.0, 2.0, -3.0, 4.0, 5.0});
 
     for (auto _ : state) {
         auto result = t1 * t2;

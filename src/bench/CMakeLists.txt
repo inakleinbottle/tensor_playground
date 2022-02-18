@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.16)
 find_package(benchmark REQUIRED)
 
 
-add_executable(TensorPlayground_benchmarks)
+add_executable(TensorPlayground_benchmarks params.h)
 
 target_sources(TensorPlayground_benchmarks
         PRIVATE
