@@ -28,9 +28,16 @@ class index_word {
     constexpr explicit index_word(I data) : m_data(data) {}
 
     constexpr index_word(std::initializer_list<integer_type> arg) : m_data() {
-        for (auto a : arg) {
-            m_data *= Width;
-            m_data += a;
+        if (Type == index_type::TotalOrder) {
+            for (auto a : arg) {
+                m_data *= Width;
+                m_data += a;
+            }
+        } else {
+            for (auto a : arg) {
+                m_data *= Width;
+                m_data += a-1;
+            }
         }
     }
 
@@ -62,16 +69,24 @@ class index_word {
 
     constexpr std::pair<index_word, index_word> split(unsigned right_length) const noexcept {
         auto split_n = power(Integer(Width), right_length);
-        auto tmp = 1 + (m_data - 1) % split_n;
-        return {index_word((m_data - tmp) / split_n), index_word(tmp)};
+        if (Type == index_type::TotalOrder) {
+            auto tmp = 1 + (m_data - 1) % split_n;
+            return {index_word((m_data - tmp) / split_n), index_word(tmp)};
+        } else {
+            return {index_word((m_data) / split_n), index_word(m_data % split_n)};
+        }
     }
 
     template<unsigned RightLength>
     constexpr std::pair<index_word, index_word> split() const noexcept {
         static_assert(RightLength > 0, "RightLength must be positive");
         constexpr auto split_n = power(Integer(Width), RightLength);
-        auto tmp = 1 + (m_data - 1) % split_n;
-        return {index_word((m_data - tmp) / split_n), index_word(tmp)};
+        if (Type == index_type::TotalOrder) {
+            auto tmp = 1 + (m_data - 1) % split_n;
+            return {index_word((m_data - tmp) / split_n), index_word(tmp)};
+        } else {
+            return {index_word((m_data) / split_n), index_word(m_data % split_n)};
+        }
     }
 
     index_word reverse() const noexcept {
@@ -79,7 +94,7 @@ class index_word {
         Integer result_inner(0);
 
         while (tmp) {
-            auto tmp2 = tmp.split(1);
+            auto tmp2 = tmp.split<1>();
             tmp = tmp2.first;
             result_inner *= Width;
             result_inner += static_cast<Integer>(tmp2.second);
