@@ -44,58 +44,75 @@ template<typename Coeffs, size_type Width, unsigned ThisLevelLetters, unsigned..
 struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLetters...> {
     static constexpr size_type tile_width = power(Width, ThisLevelLetters);
     static constexpr size_type tile_size = tile_width * tile_width;
-    static constexpr size_type all_letters = total_letters<ThisLevelLetters, RemainingLetters...>::value;
+    static constexpr size_type tile_letters = total_letters<ThisLevelLetters, RemainingLetters...>::value;
     static constexpr size_type remaining_letters = total_letters<RemainingLetters...>::value;
 
     using pointer = Coeffs *;
     using const_pointer = const Coeffs *;
     using index_key = index_word<Width, size_type>;
     using tile_type = tile<Coeffs, tile_size>;
+    using next = multiplication_level_helper<Coeffs, Width, RemainingLetters...>;
 
     template<unsigned Level, typename GilesTensor, typename Op>
-    static typename std::enable_if<(Level >= 2 * all_letters)>::type
-    do_tiled_level(
-        pointer out_ptr,
-        const GilesTensor &lhs,
-        const GilesTensor &rhs,
-        size_type middle_idx,
-        Op &op) noexcept {
+    static typename std::enable_if<(Level >= 2 * tile_letters)>::type
+    do_level(pointer out_ptr,
+             const GilesTensor &lhs,
+             const GilesTensor &rhs,
+             index_key middle,
+             index_key rmiddle,
+             Op &op) noexcept
+    {
+        constexpr size_type this_size = power(Width, ThisLevelLetters);
+        using permute = reversing_permutation<Width, ThisLevelLetters>;
 
-        static constexpr auto this_tile_width = power(Width, ThisLevelLetters);
-        static constexpr auto middle_deg = Level - 2 * all_letters;
-        static constexpr auto shift = power(Width, middle_deg + ThisLevelLetters);
-        using next = multiplication_level_helper<Coeffs, Width, RemainingLetters...>;
+        tile_type this_tile;
 
-        for (size_type i = 0; i < this_tile_width; ++i) {
-            for (size_type j = 0; j < this_tile_width; ++j) {
-                auto middle = i * shift + middle_idx * this_tile_width + j;
-                next::template do_tiled_level<2 * remaining_letters>(out_ptr, lhs, rhs, middle, op);
+        for (size_type i=0; i<this_size; ++i) {
+            for (size_type j=0; j<this_size; ++j) {
+                auto ri = permute::permute_idx(i);
+                auto rj = permute::permute_idx(j);
+                next::template do_level<Level>();
             }
         }
+
     }
 
     template<unsigned Level, typename GilesTensor, typename Op>
-    static typename std::enable_if<(Level >= 2 * all_letters)>::type
+    static typename std::enable_if<(Level >= 2 * tile_letters)>::type
     do_level(
         pointer out_ptr,
         const GilesTensor &lhs,
         const GilesTensor &rhs,
         Op &op) noexcept {
-        static constexpr auto max_deg = Level - 2 * all_letters;
-        static constexpr auto deg_size = power(Width, max_deg);
-        static constexpr auto stride = power(Width, Level);
+        static constexpr auto mid_deg = Level - 2 * tile_letters;
+        static constexpr auto stride = power(Width, mid_deg);
+        index_key mid(tensor_start_of_degree(Width, mid_deg));
+        size_type max_idx(tensor_start_of_degree(Width, mid_deg + 1));
 
         tile_type this_tile;
+        for (; mid < max_idx; ++mid) {
+            index_key rmid = mid.reverse();
+            next::template do_level<Level>(this_tile, )
 
-        for (size_type middle_idx = 0; middle_idx < deg_size; ++middle_idx) {
-            stride_read<Coeffs, stride, ThisLevelLetters, ThisLevelLetters>(
-                static_cast<Coeffs *>(this_tile), out_ptr + middle_idx * tile_width);
-
-            do_tiled_level<Level>(static_cast<pointer>(this_tile), lhs, rhs, middle_idx, op);
-
-            stride_write<Coeffs, stride, ThisLevelLetters, ThisLevelLetters>(
-                out_ptr + middle_idx * tile_width, static_cast<const Coeffs *>(this_tile));
+            for (size_type i = 0; i < tile_width; ++i) {
+                for (size_type j = 0; j < tile_width; ++j) {
+                    out_ptr[i * stride + j] += this_tile[i * tile_width];
+                }
+            }
         }
+
+        do_level<Level - 1>(out_ptr, lhs, rhs, op);
+    }
+
+    template<unsigned Level, typename GilesTensor, typename Op>
+    static typename std::enable_if<(Level < 2 * tile_letters)>::type
+    do_level(
+        pointer out_ptr,
+        const GilesTensor &lhs,
+        const GilesTensor &rhs,
+        Op &op) noexcept
+    {
+        next::template do_level<Level>(out_ptr, lhs, rhs, op);
     }
 };
 
@@ -105,7 +122,6 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
     static constexpr degree_type tile_letters = TileLetters;
     static constexpr size_type tile_width = power(Width, TileLetters);
     static constexpr size_type tile_size = tile_width * tile_width;
-    static constexpr degree_type all_letters = TileLetters;
 
     using pointer = Coeffs *;
     using const_pointer = const Coeffs *;
@@ -210,7 +226,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
     template<unsigned Level, typename Op>
     static void
     do_level_tiled(
-        tile_type &out_ptr,
+        pointer out_ptr,
         const_pointer lhs,
         const_pointer lhs_r,
         const_pointer rhs,
@@ -262,8 +278,28 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
             op);
     }
 
+    template <unsigned Level, typename GilesTensor, typename Op>
+    static typename std::enable_if<(Level >= 2 * tile_letters)>::type
+    do_level(pointer out_ptr,
+             const GilesTensor &lhs,
+             const GilesTensor &rhs,
+             index_key middle,
+             index_key rmiddle,
+             Op &op) noexcept
+    {
+        do_level_tiled<Level>(
+            out_ptr,
+            lhs.range_begin(),
+            lhs.reverse_data.data(),
+            rhs.range_begin(),
+            middle,
+            rmiddle,
+            op);
+    }
+
+
     template<unsigned Level, typename GilesTensor, typename Op>
-    static typename std::enable_if<(Level > 2 * all_letters)>::type
+    static typename std::enable_if<(Level >= 2 * tile_letters)>::type
     do_level(
         pointer out_ptr,
         const GilesTensor &lhs,
@@ -277,24 +313,13 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
         tile_type this_tile;
         for (; mid < max_idx; ++mid) {
             index_key rmid = mid.reverse();
-            pointer current = out_ptr + mid * tile_width;
-            //stride_read<Coeffs, stride, tile_width, tile_width>(static_cast<pointer>(this_tile), current);
-            do_level_tiled<Level>(
-                this_tile,
-                lhs.range_begin(),
-                lhs.reverse_data.data(),
-                rhs.range_begin(),
-                mid,
-                rmid,
-                op);
+            do_level<Level>(this_tile, lhs, rhs, mid, rmid, op);
 
             for (size_type i=0; i<tile_width; ++i) {
                 for (size_type j=0; j<tile_width; ++j) {
-                    out_ptr[i*stride + j] += this_tile[i*tile_width]
+                    out_ptr[i*stride + j] += this_tile[i*tile_width];
                 }
             }
-
-            //stride_write<Coeffs, stride, tile_width, tile_width>(current, static_cast<const_pointer>(this_tile));
         }
 
         do_level<Level - 1>(out_ptr, lhs, rhs, op);
@@ -324,7 +349,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
     };
 
     template<unsigned Level, typename GilesTensor, typename Op>
-    static typename std::enable_if<(Level > 0 && Level <= 2 * all_letters)>::type
+    static typename std::enable_if<(Level > 0 && Level < 2 * tile_letters)>::type
     do_level(
         pointer out_ptr,
         const GilesTensor &lhs,
@@ -337,7 +362,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
     }
 
     template<unsigned Level, typename GilesTensor, typename Op>
-    static typename std::enable_if<(Level == 0 && Level <= 2 * all_letters)>::type
+    static typename std::enable_if<(Level == 0 && Level < 2 * tile_letters)>::type
     do_level(
         pointer out_ptr,
         const GilesTensor &lhs,

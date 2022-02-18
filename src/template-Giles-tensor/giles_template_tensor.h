@@ -199,7 +199,7 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
         }
 
 #else
-        dtl::multiplication_level_helper<Coeffs, Width, tile_letters>::template do_level<Depth>(out.range_begin(), lhs, rhs, op);
+        dtl::multiplication_level_helper<Coeffs, Width, 2, 2>::template do_level<Depth>(out.range_begin(), lhs, rhs, op);
 #endif
     }
 
