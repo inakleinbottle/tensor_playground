@@ -20,4 +20,4 @@ target_link_libraries(TensorPlayground_benchmarks PRIVATE
         Playground::free_tensor
         Playground::giles_templated_tensor
         )
-target_compile_options(TensorPlayground_benchmarks PRIVATE -fno-omit-frame-pointer -p -pg)
+target_compile_options(TensorPlayground_benchmarks PRIVATE -fno-omit-frame-pointer -g -p -pg)
