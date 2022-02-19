@@ -81,6 +81,9 @@ class index_word {
     constexpr std::pair<index_word, index_word> split() const noexcept {
         static_assert(RightLength > 0, "RightLength must be positive");
         constexpr auto split_n = power(Integer(Width), RightLength);
+        if (m_data == 0) {
+            return {index_word(0), index_word(0)};
+        }
         if (Type == index_type::TotalOrder) {
             auto tmp = 1 + (m_data - 1) % split_n;
             return {index_word((m_data - tmp) / split_n), index_word(tmp)};

@@ -42,6 +42,7 @@ struct multiplication_level_helper;
 
 template<typename Coeffs, size_type Width, unsigned ThisLevelLetters, unsigned... RemainingLetters>
 struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLetters...> {
+    static_assert(ThisLevelLetters > 0, "tile size must be strictly positive");
     static constexpr size_type tile_width = power(Width, ThisLevelLetters);
     static constexpr size_type tile_size = tile_width * tile_width;
     static constexpr size_type tile_letters = total_letters<ThisLevelLetters, RemainingLetters...>::value;
@@ -62,16 +63,29 @@ struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLet
              index_key rmiddle,
              Op &op) noexcept
     {
-        constexpr size_type this_size = power(Width, ThisLevelLetters);
+        constexpr size_type this_width = power(Width, ThisLevelLetters);
+        constexpr size_type this_size = this_width*this_width;
+        constexpr size_type level_shift = power(Width, Level + ThisLevelLetters);
         using permute = reversing_permutation<Width, ThisLevelLetters>;
 
-        tile_type this_tile;
+        typename next::tile_type this_tile;
 
-        for (size_type i=0; i<this_size; ++i) {
-            for (size_type j=0; j<this_size; ++j) {
+        for (size_type i=0; i< this_width; ++i) {
+            for (size_type j=0; j< this_width; ++j) {
                 auto ri = permute::permute_idx(i);
                 auto rj = permute::permute_idx(j);
-                next::template do_level<Level>();
+                next::template do_level<Level>(
+                    static_cast<pointer>(this_tile),
+                    lhs, rhs,
+                    index_key(i*level_shift + middle* this_width + j),
+                    index_key(rj*level_shift + rmiddle* this_width + ri),
+                    op
+                    );
+
+
+                auto offset = (i* this_width + j);
+                stride_write<double, next::tile_width, tile_width, tile_width>(out_ptr + offset, this_tile);
+
             }
         }
 
@@ -83,7 +97,8 @@ struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLet
         pointer out_ptr,
         const GilesTensor &lhs,
         const GilesTensor &rhs,
-        Op &op) noexcept {
+        Op &op) noexcept
+    {
         static constexpr auto mid_deg = Level - 2 * tile_letters;
         static constexpr auto stride = power(Width, mid_deg);
         index_key mid(tensor_start_of_degree(Width, mid_deg));
@@ -92,11 +107,11 @@ struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLet
         tile_type this_tile;
         for (; mid < max_idx; ++mid) {
             index_key rmid = mid.reverse();
-            next::template do_level<Level>(this_tile, )
+            next::template do_level<Level>(static_cast<pointer>(this_tile), lhs, rhs, mid, rmid, op);
 
             for (size_type i = 0; i < tile_width; ++i) {
                 for (size_type j = 0; j < tile_width; ++j) {
-                    out_ptr[i * stride + j] += this_tile[i * tile_width];
+                    out_ptr[i * stride + j] += this_tile[i * tile_width + j];
                 }
             }
         }
@@ -118,6 +133,7 @@ struct multiplication_level_helper<Coeffs, Width, ThisLevelLetters, RemainingLet
 
 template<typename Coeffs, size_type Width, unsigned TileLetters>
 struct multiplication_level_helper<Coeffs, Width, TileLetters> {
+    static_assert(TileLetters > 0, "Tile cannot be zero sized");
     using degree_type = unsigned;
     static constexpr degree_type tile_letters = TileLetters;
     static constexpr size_type tile_width = power(Width, TileLetters);
@@ -134,7 +150,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
 
         template<typename Op>
         void inner(
-            tile_type &this_tile,
+            pointer this_tile,
             const_pointer lhs_ptr,
             const_pointer rhs_ptr,
             Op &op,
@@ -152,7 +168,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
 
         template<typename Op>
         void operator()(
-            tile_type &this_tile,
+            pointer this_tile,
             const_pointer lhs_ptr,
             const_pointer rhs_ptr,
             Op &op) const noexcept {
@@ -169,7 +185,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
 
         template<typename Op>
         void inner(
-            tile_type &this_tile,
+            pointer this_tile,
             const_pointer lhs_ptr,
             const_pointer rhs_ptr,
             Op &op,
@@ -187,7 +203,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
 
         template<typename Op>
         void operator()(
-            tile_type &this_tile,
+            pointer this_tile,
             const_pointer lhs_ptr,
             const_pointer rhs_ptr,
             Op &op) const noexcept {
@@ -204,7 +220,7 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
     struct middle_cases {
         template<typename Op>
         void operator()(
-            tile_type &this_tile,
+            pointer this_tile,
             const_pointer lhs_ptr,
             const_pointer rhs_ptr,
             index_key middle_word,
@@ -236,6 +252,10 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
 
         // Handle cases of 0*out_depth and out_depth*0
         {
+            assert(lhs!= nullptr);
+            assert(rhs!= nullptr);
+            assert(lhs_r!= nullptr);
+
             auto lhs_unit = lhs[0], rhs_unit = rhs[0];
             const auto *lhs_ptr = lhs + static_cast<size_type>(middle_idx) * tile_width;
             const auto *rhs_ptr = rhs + static_cast<size_type>(middle_idx) * tile_width;
@@ -252,13 +272,13 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
                     out_ptr[i * tile_width + j] += op(lhs_ptr[i * stride + j] * rhs_unit);
                 }
             }
-
-
         }
+
+        constexpr degree_type middle_word_max = (Level > 2*TileLetters) ? Level - 2*TileLetters -1 : 0;
 
         increasing_degree_walker<1, TileLetters - 1, left_side_cases> left_walker;
         increasing_degree_walker<1, TileLetters - 1, right_side_cases> right_walker;
-        increasing_degree_walker<1, Level - 2 * TileLetters - 1, middle_cases> middle_walker;
+        increasing_degree_walker<1, middle_word_max, middle_cases> middle_walker;
 
         left_walker.apply(
             out_ptr,
@@ -313,11 +333,11 @@ struct multiplication_level_helper<Coeffs, Width, TileLetters> {
         tile_type this_tile;
         for (; mid < max_idx; ++mid) {
             index_key rmid = mid.reverse();
-            do_level<Level>(this_tile, lhs, rhs, mid, rmid, op);
+            do_level<Level>(static_cast<pointer>(this_tile), lhs, rhs, mid, rmid, op);
 
             for (size_type i=0; i<tile_width; ++i) {
                 for (size_type j=0; j<tile_width; ++j) {
-                    out_ptr[i*stride + j] += this_tile[i*tile_width];
+                    out_ptr[i*stride + j] += this_tile[i*tile_width + j];
                 }
             }
         }

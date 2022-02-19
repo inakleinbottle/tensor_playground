@@ -9,7 +9,7 @@
 
 namespace playground {
 
-template<unsigned Level, unsigned MinLevel, template<unsigned> class Fn, bool = (Level > MinLevel)>
+template<unsigned Level, unsigned MinLevel, template<unsigned> class Fn, bool = (Level >= MinLevel)>
 struct decreasing_degree_walker {
 
     Fn<Level> m_fn;
@@ -23,7 +23,7 @@ struct decreasing_degree_walker {
 };
 
 template<unsigned MinLevel, template<unsigned> class Fn>
-struct decreasing_degree_walker<MinLevel, MinLevel, Fn, false> {
+struct decreasing_degree_walker<MinLevel, MinLevel, Fn, true> {
 
     Fn<MinLevel> m_fn;
 

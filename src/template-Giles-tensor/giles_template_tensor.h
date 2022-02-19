@@ -77,6 +77,10 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
         const giles_template_tensor &rhs,
         const std::vector<size_type> &start_of_degree_array,
         Op op) noexcept {
+
+        assert(lhs.size() > 0);
+        assert(rhs.size() > 0);
+
 #ifdef TENSOR_PLAYGROUND_INLINE_DEF
         Coeffs tile[tile_size];
 
@@ -199,7 +203,7 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
         }
 
 #else
-        dtl::multiplication_level_helper<Coeffs, Width, 2, 2>::template do_level<Depth>(out.range_begin(), lhs, rhs, op);
+        dtl::multiplication_level_helper<Coeffs, Width,1, 2>::template do_level<Depth>(out.range_begin(), lhs, rhs, op);
 #endif
     }
 

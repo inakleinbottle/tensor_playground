@@ -9,7 +9,7 @@
 
 namespace playground {
 
-template<unsigned Level, unsigned MaxLevel, template<unsigned> class Fn, bool = (Level < MaxLevel)>
+template<unsigned Level, unsigned MaxLevel, template<unsigned> class Fn, bool = (Level <= MaxLevel)>
 struct increasing_degree_walker {
 
     Fn<Level> m_fn;
@@ -23,7 +23,7 @@ struct increasing_degree_walker {
 };
 
 template<unsigned MaxLevel, template<unsigned> class Fn>
-struct increasing_degree_walker<MaxLevel, MaxLevel, Fn, false> {
+struct increasing_degree_walker<MaxLevel, MaxLevel, Fn, true> {
 
     Fn<MaxLevel> m_fn;
 
