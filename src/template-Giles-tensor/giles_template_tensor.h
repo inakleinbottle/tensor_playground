@@ -30,6 +30,8 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
     using degree_type = unsigned;
     using base_type::size_array;
 
+    static constexpr degree_type max_depth = Depth;
+
     using index_key = index_word<Width, size_type>;
 
     static constexpr degree_type tile_letters = 2;
@@ -42,7 +44,7 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
 
    private:
     void fill_reverse_data() {
-        reverse_data.resize(size_array[Depth - 1]);
+        reverse_data.resize(tensor_alg_size(Width, Depth-1));
         for (auto k = index_key(0); k < size_array[Depth - 1]; ++k) {
             reverse_data[k.reverse()] = operator[](k);
         }
@@ -87,13 +89,13 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
         for (degree_type out_depth = Depth; out_depth > 2 * tile_letters; --out_depth) {
             const auto stride = power(Width, out_depth - tile_letters);
 
-            for (auto k = static_cast<index_word>(size_array[out_depth - 2 * tile_letters]); k < size_array[out_depth - 2 * tile_letters + 1]; ++k) {
+            for (auto k = 0; k < power(Width, out_depth); ++k) {
 
                 // Handle cases of 0*out_depth and out_depth*0
                 {
                     auto lhs_unit = lhs[0], rhs_unit = rhs[0];
-                    const auto *lhs_ptr = lhs.range_begin() + static_cast<size_type>(k) * tile_width;
-                    const auto *rhs_ptr = rhs.range_begin() + static_cast<size_type>(k) * tile_width;
+                    const auto *lhs_ptr = lhs.range_begin() + k + tensor_start_of_degree(Width, out_depth);
+                    const auto *rhs_ptr = rhs.range_begin() + k + tensor_start_of_degree(Width, out_depth);
 
                     /// First do the zero*Depth and Depth*zero case
                     for (size_type i = 0; i < tile_width; ++i) {
@@ -104,7 +106,7 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
                 }
                 {
                     // Handle the cases where the left hand side degree is too small for tiling
-                    const auto *rhs_ptr = rhs.range_begin() + static_cast<size_type>(k) * tile_width;
+                    const auto *rhs_ptr = rhs.range_begin();
                     /*
                      * Here we have to "transfer" the excess letters to the right-hand word to offset
                      * the fact that on the left-hand side we have at most lhs_deg letters.
@@ -115,15 +117,19 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
                     for (degree_type lhs_deg = 1; lhs_deg < tile_letters; ++lhs_deg) {
                         const auto *lhs_ptr = lhs.reverse_data.data() + size_array[lhs_deg];
                         for (size_type i = 0; i < tile_width; ++i) {
-                            index_word tmp(i + size_array[lhs_deg]);
-                            auto split = tmp.split(tile_letters - lhs_deg);// split is by number of right-hand letters
-                            auto lhs_word = split.first;
-                            auto lhs_middle = split.second;
+                            index_key tmp(i + size_array[lhs_deg]);
+                            auto lhs_word = k / power(Width, tile_letters - lhs_deg);
+                            auto lhs_middle = k % power(Width, tile_letters - lhs_deg);
+
+//                            auto split = tmp.split(tile_letters - lhs_deg);// split is by number of right-hand letters
+//                            auto lhs_word = static_cast<size_type>(split.first) - tensor_start_of_degree(Width, out_depth-lhs_deg);
+//                            auto lhs_middle = static_cast<size_type>(split.second) - tensor_start_of_degree(Width, lhs_deg);
 
                             const auto &lhs_val = lhs_ptr[static_cast<size_type>(lhs_word)];
                             for (size_type j = 0; j < tile_width; ++j) {
                                 // We've already accounted for the offset induced by the middle word k.
-                                tile[static_cast<size_type>(i) * tile_width + static_cast<size_type>(j)] += lhs_val * rhs_ptr[static_cast<size_type>(lhs_middle) * stride + static_cast<size_type>(j)];
+                                auto t = static_cast<size_type>(lhs_middle) * tile_width + j;
+                                tile[i*tile_width + j] += lhs_val * rhs_ptr[t];
                             }
                         }
                     }
@@ -131,9 +137,10 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
 
                 // Middle cases
                 for (degree_type split_deg = 1; split_deg < out_depth - 2 * tile_letters - 1; ++split_deg) {
-                    auto split = k.split(split_deg);
-                    auto lhs_middle = split.first.reverse();
-                    auto rhs_middle = split.second;
+                    index_key tmp(k + size_array[out_depth]);
+                    auto split = tmp.split(split_deg);
+                    auto lhs_middle = static_cast<size_type>(split.first.reverse()) - size_array[out_depth-split_deg];
+                    auto rhs_middle = static_cast<size_type>(split.second) - size_array[split_deg];
 
                     for (size_type i = 0; i < tile_width; ++i) {
                         for (size_type j = 0; j < tile_width; ++j) {
@@ -146,7 +153,7 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
 
                 // Handle cases where the right hand side degree is too small for tiling
                 {
-                    const auto *lhs_ptr = lhs.reverse_data.data() + static_cast<size_type>(k) * tile_width;
+                    const auto *lhs_ptr = lhs.reverse_data.data();
                     /*
                      * This is the reverse of the above. We have to shift the letters from the right-hand
                      * tile index over to the left to account for the fact that there aren't enough letters
@@ -156,21 +163,25 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
                         const auto *rhs_ptr = rhs.range_begin() + size_array[rhs_deg - 1];
                         for (size_type i = 0; i < tile_width; ++i) {
                             for (size_type j = 0; j < tile_width; ++j) {
-                                index_word tmp(j + size_array[rhs_deg]);
-                                auto split = tmp.split(rhs_deg);
-                                auto rhs_middle = split.first.reverse();
-                                auto rhs_word = split.second;
+//                                index_key tmp(j + size_array[rhs_deg]);
+//                                auto split = tmp.split(rhs_deg);
+//                                auto rhs_middle = split.first.reverse();
+//                                auto rhs_word = split.second;
+                                auto rhs_middle =
                                 tile[static_cast<size_type>(i) * tile_width + static_cast<size_type>(j)] += lhs_ptr[rhs_middle * tile_width + i] * rhs_ptr[static_cast<size_type>(rhs_word)];
                             }
                         }
                     }
                 }
 
+                auto sod = tensor_start_of_degree(Width, out_depth);
                 // Write the tile out into the result.
-                const auto rword = k.reverse();
-                auto *out_ptr = out.range_begin() + static_cast<size_type>(k) * tile_width;
+                auto *out_ptr = out.range_begin() + static_cast<size_type>(k) + sod;
                 for (size_type i = 0; i < tile_width; ++i) {
                     for (size_type j = 0; j < tile_width; ++j) {
+                        auto t2 = k*tile_width;
+                        auto tmp = (i * stride + j + k);
+                        assert(tmp < tensor_alg_size(Width, out_depth));
                         out_ptr[i * stride + j] += tile[i * tile_width + j];
                     }
                 }
@@ -203,7 +214,7 @@ class giles_template_tensor : public simple_template_tensor<Width, Depth, Coeffs
         }
 
 #else
-        dtl::multiplication_level_helper<Coeffs, Width,1, 2>::template do_level<Depth>(out.range_begin(), lhs, rhs, op);
+        dtl::multiplication_level_helper<Coeffs, Width, 2, 2>::template do_level<Depth>(out.range_begin(), lhs, rhs, op);
 #endif
     }
 

@@ -11,7 +11,7 @@
 #define WIDTH PLAYGROUND_BENCH_WIDTH
 #endif
 #ifndef PLAYGROUND_BENCH_DEPTH
-#define DEPTH 8
+#define DEPTH 12
 #else
 #define DEPTH PLAYGROUND_BENCH_DEPTH
 #endif

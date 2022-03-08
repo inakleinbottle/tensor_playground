@@ -3,7 +3,7 @@ project(tensor_playground)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(tensor_playground main.cpp src/Giles_tensor/Giles_tensor.cpp src/Giles_tensor/Giles_tensor.h src/template-Giles-tensor/giles_template_tensor.h)
+add_executable(tensor_playground main.cpp src/Giles_tensor/Giles_tensor.cpp src/Giles_tensor/Giles_tensor.h src/template-Giles-tensor/giles_template_tensor.h src/tests/test_giles_tensor.cpp)
 
 
 
