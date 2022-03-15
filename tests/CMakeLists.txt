@@ -21,7 +21,6 @@ include(GoogleTest)
 
 
 set(TEST_FILES 
-simple-test.cpp
 test_giles_tensor.cpp
 )
 
