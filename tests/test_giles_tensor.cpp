@@ -174,7 +174,7 @@ TEST_F(GilesTensorIntegerCoefficientsTests, FullDepthTest)
 
 ////////////////////// TILING TESTS ///////////////////////
 
-class GilesTensorDepthFourTilingTests : public ::testing::Test
+class GilesTensorTilingTests : public ::testing::Test
 {
 protected:
 
@@ -208,7 +208,9 @@ protected:
     }
 };
 
-TEST_F(GilesTensorDepthFourTilingTests, OneThreeTest)
+////////////////////// DEPTH FOUR TILING ///////////////////////
+
+TEST_F(GilesTensorTilingTests, OneThreeTest)
 {
     // lhs = {0 1{1} 0 ... 0}
     // rhs = {0 ... 0 1{111} 0 ... 0}
@@ -225,7 +227,7 @@ TEST_F(GilesTensorDepthFourTilingTests, OneThreeTest)
     }
 }
 
-TEST_F(GilesTensorDepthFourTilingTests, TwoTwoTest)
+TEST_F(GilesTensorTilingTests, TwoTwoTest)
 {
     // lhs = {0 ... 0 1{11} 0 ... 0}
     // rhs = {0 ... 0 1{11} 0 ... 0}
@@ -243,7 +245,7 @@ TEST_F(GilesTensorDepthFourTilingTests, TwoTwoTest)
 
 }
 
-TEST_F(GilesTensorDepthFourTilingTests, ThreeOneTest)
+TEST_F(GilesTensorTilingTests, ThreeOneTest)
 {
     // lhs = {0 ... 0 1{111} 0 ... 0}
     // rhs = {0 ... 0 1{1} 0 ... 0}
@@ -253,6 +255,80 @@ TEST_F(GilesTensorDepthFourTilingTests, ThreeOneTest)
     simple_template_tensor<width, depth> simple_result;
 
     get_contributions_from_degrees(3, 1, giles_result, simple_result);
+
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+
+}
+
+////////////////////// DEPTH FIVE TILING ///////////////////////
+
+TEST_F(GilesTensorTilingTests, OneFourTest)
+{
+    // lhs = {0 1{1} 0 ... 0}
+    // rhs = {0 ... 0 1{1111} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    giles_template_tensor<width, depth> giles_result;
+    simple_template_tensor<width, depth> simple_result;
+
+    get_contributions_from_degrees(1, 4, giles_result, simple_result);
+
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+
+}
+
+TEST_F(GilesTensorTilingTests, TwoThreeTest)
+{
+    // lhs = {0 ...0 1{11} 0 ... 0}
+    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    giles_template_tensor<width, depth> giles_result;
+    simple_template_tensor<width, depth> simple_result;
+
+    get_contributions_from_degrees(2, 3, giles_result, simple_result);
+
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+
+}
+
+TEST_F(GilesTensorTilingTests, ThreeTwoTest)
+{
+    // lhs = {0 ...0 1{111} 0 ... 0}
+    // rhs = {0 ... 0 1{11} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    giles_template_tensor<width, depth> giles_result;
+    simple_template_tensor<width, depth> simple_result;
+
+    get_contributions_from_degrees(3, 2, giles_result, simple_result);
+
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+
+}
+
+TEST_F(GilesTensorTilingTests, FourOneTest)
+{
+    // lhs = {0 ...0 1{1111} 0 ... 0}
+    // rhs = {0 1{1} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    giles_template_tensor<width, depth> giles_result;
+    simple_template_tensor<width, depth> simple_result;
+
+    get_contributions_from_degrees(4, 1, giles_result, simple_result);
 
     for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
     {
