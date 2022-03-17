@@ -171,3 +171,60 @@ TEST_F(GilesTensorIntegerCoefficientsTests, FullDepthTest)
     }
 
 }
+
+////////////////////// TILING TESTS ///////////////////////
+
+class GilesTensorDepthFourTilingTests : public ::testing::Test
+{
+protected:
+
+    static constexpr unsigned width = 5;
+    static constexpr unsigned depth = 5;
+
+    void create_lhs_rhs_pairs(
+        unsigned lhs_degree, 
+        unsigned rhs_degree, 
+        giles_template_tensor<width, depth> &giles_lhs,
+        giles_template_tensor<width, depth> &giles_rhs,
+        simple_template_tensor<width, depth> &simple_lhs,
+        simple_template_tensor<width, depth> &simple_rhs
+        )
+    {
+        giles_lhs[tensor_alg_size(width, lhs_degree-1)] = 1.0;
+        simple_lhs[tensor_alg_size(width, lhs_degree-1)] = 1.0;
+        giles_rhs[tensor_alg_size(width, rhs_degree-1)] = 1.0;
+        simple_rhs[tensor_alg_size(width, rhs_degree-1)] = 1.0;
+
+    }
+
+    virtual void SetUp()
+    {
+
+    }
+};
+
+TEST_F(GilesTensorDepthFourTilingTests, OneThreeTest)
+{
+    // lhs = {0 1{1} 0 ... 0}
+    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // ans = {0 ... 0 1{1111} 0 ... 0}
+
+    giles_template_tensor<width, depth> giles_lhs;
+    giles_template_tensor<width, depth> giles_rhs;
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_lhs_rhs_pairs(1,3, giles_lhs, giles_rhs, simple_lhs, simple_rhs);
+
+    giles_template_tensor<width, depth> giles_result;
+    simple_template_tensor<width, depth> simple_result;
+
+    giles_result = giles_lhs*giles_rhs;
+    simple_result = simple_lhs*simple_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+
+}
