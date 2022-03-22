@@ -219,8 +219,6 @@ protected:
     }
 };
 
-////////////////////// DEPTH FOUR TILING ///////////////////////
-
 ////////////////////// DEPTH FOUR TILING FROM STD VECTOR ///////////////////////
 
 TEST_F(GilesTensorTilingTests, OneThreeTest)
@@ -350,7 +348,7 @@ TEST_F(GilesTensorTilingTests, ThreeOneFromSimpleTensorTest)
     }
 }
 
-////////////////////// DEPTH FIVE TILING ///////////////////////
+////////////////////// DEPTH FIVE TILING FROM STD VECTOR ///////////////////////
 
 TEST_F(GilesTensorTilingTests, OneFourTest)
 {
@@ -422,4 +420,102 @@ TEST_F(GilesTensorTilingTests, FourOneTest)
         EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
     }
 
+}
+
+////////////////////// DEPTH FIVE TILING FROM SIMPLE TENSOR ///////////////////////
+
+TEST_F(GilesTensorTilingTests, OneFourFromSimpleTensorTest)
+{
+    // lhs = {0 1{1} 0 ... 0}
+    // rhs = {0 ... 0 1{1111} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_degree_tensors(1, 4, simple_lhs, simple_rhs);
+
+    simple_template_tensor<width, depth> simple_result = simple_lhs*simple_rhs;
+
+    giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+    giles_template_tensor<width, depth> giles_rhs(simple_rhs);   
+
+    giles_template_tensor<width, depth> giles_result = giles_lhs*giles_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+}
+
+TEST_F(GilesTensorTilingTests, TwoThreeFromSimpleTensorTest)
+{
+    // lhs = {0 ...0 1{11} 0 ... 0}
+    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_degree_tensors(2, 3, simple_lhs, simple_rhs);
+
+    simple_template_tensor<width, depth> simple_result = simple_lhs*simple_rhs;
+
+    giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+    giles_template_tensor<width, depth> giles_rhs(simple_rhs);   
+
+    giles_template_tensor<width, depth> giles_result = giles_lhs*giles_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+}
+
+TEST_F(GilesTensorTilingTests, ThreeTwoFromSimpleTensorTest)
+{
+    // lhs = {0 ...0 1{111} 0 ... 0}
+    // rhs = {0 ... 0 1{11} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_degree_tensors(3, 2, simple_lhs, simple_rhs);
+
+    simple_template_tensor<width, depth> simple_result = simple_lhs*simple_rhs;
+
+    giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+    giles_template_tensor<width, depth> giles_rhs(simple_rhs);   
+
+    giles_template_tensor<width, depth> giles_result = giles_lhs*giles_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+}
+
+TEST_F(GilesTensorTilingTests, FourOneFromSimpleTensorTest)
+{
+    // lhs = {0 ...0 1{1111} 0 ... 0}
+    // rhs = {0 1{1} 0 ... 0}
+    // ans = {0 ... 0 1{11111} 0 ... 0}
+
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_degree_tensors(4, 1, simple_lhs, simple_rhs);
+
+    simple_template_tensor<width, depth> simple_result = simple_lhs*simple_rhs;
+
+    giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+    giles_template_tensor<width, depth> giles_rhs(simple_rhs);   
+
+    giles_template_tensor<width, depth> giles_result = giles_lhs*giles_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
 }
