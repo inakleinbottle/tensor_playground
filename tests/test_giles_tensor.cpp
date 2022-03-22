@@ -202,6 +202,17 @@ protected:
         simple_result = simple_lhs*simple_rhs;
     }
 
+    void create_degree_tensors(
+        unsigned lhs_degree,
+        unsigned rhs_degree,
+        simple_template_tensor<width, depth> &simple_lhs,
+        simple_template_tensor<width, depth> &simple_rhs
+        )
+    {
+        simple_lhs[tensor_alg_size(width, lhs_degree-1)] = 1.0;
+        simple_rhs[tensor_alg_size(width, rhs_degree-1)] = 1.0;
+    }
+
     virtual void SetUp()
     {
 
@@ -209,6 +220,8 @@ protected:
 };
 
 ////////////////////// DEPTH FOUR TILING ///////////////////////
+
+////////////////////// DEPTH FOUR TILING FROM STD VECTOR ///////////////////////
 
 TEST_F(GilesTensorTilingTests, OneThreeTest)
 {
@@ -261,6 +274,80 @@ TEST_F(GilesTensorTilingTests, ThreeOneTest)
         EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
     }
 
+}
+
+////////////////////// DEPTH FOUR TILING FROM SIMPLE TENSOR ///////////////////////
+
+TEST_F(GilesTensorTilingTests, OneThreeFromSimpleTensorTest)
+{
+    // lhs = {0 1{1} 0 ... 0}
+    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // ans = {0 ... 0 1{1111} 0 ... 0}
+
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_degree_tensors(1, 3, simple_lhs, simple_rhs);
+
+    simple_template_tensor<width, depth> simple_result = simple_lhs*simple_rhs;
+
+    giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+    giles_template_tensor<width, depth> giles_rhs(simple_rhs);   
+
+    giles_template_tensor<width, depth> giles_result = giles_lhs*giles_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+}
+
+TEST_F(GilesTensorTilingTests, TwoTwoFromSimpleTensorTest)
+{
+    // lhs = {0 1{1} 0 ... 0}
+    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // ans = {0 ... 0 1{1111} 0 ... 0}
+
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_degree_tensors(2, 2, simple_lhs, simple_rhs);
+
+    simple_template_tensor<width, depth> simple_result = simple_lhs*simple_rhs;
+
+    giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+    giles_template_tensor<width, depth> giles_rhs(simple_rhs);   
+
+    giles_template_tensor<width, depth> giles_result = giles_lhs*giles_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
+}
+
+TEST_F(GilesTensorTilingTests, ThreeOneFromSimpleTensorTest)
+{
+    // lhs = {0 1{1} 0 ... 0}
+    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // ans = {0 ... 0 1{1111} 0 ... 0}
+
+    simple_template_tensor<width, depth> simple_lhs;
+    simple_template_tensor<width, depth> simple_rhs;
+
+    create_degree_tensors(3, 1, simple_lhs, simple_rhs);
+
+    simple_template_tensor<width, depth> simple_result = simple_lhs*simple_rhs;
+
+    giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+    giles_template_tensor<width, depth> giles_rhs(simple_rhs);   
+
+    giles_template_tensor<width, depth> giles_result = giles_lhs*giles_rhs;
+    
+    for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) 
+    {
+        EXPECT_EQ(giles_result[i], simple_result[i]) << "Multiplication result differs at index " << i;
+    }
 }
 
 ////////////////////// DEPTH FIVE TILING ///////////////////////
