@@ -61,15 +61,7 @@ protected:
     simple_template_tensor<width, depth> simple_result;
 
     virtual void SetUp()
-    {
-        // giles tensor lhs
-
-        giles_template_tensor<width, depth> giles_lhs;
-
-        for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) {
-            giles_lhs[i] = double(i);
-        }
-
+    {       
         // simple tensor lhs
 
         simple_template_tensor<width, depth> simple_lhs;
@@ -77,15 +69,17 @@ protected:
         for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) {
             simple_lhs[i] = double(i);
         }
+        
+        // giles tensor lhs
 
-        // giles tensor rhs
+        giles_template_tensor<width, depth> giles_lhs(simple_lhs);
 
-        giles_template_tensor<width, depth> giles_rhs;
+        //for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) {
+        //    giles_lhs[i] = double(i);
+        //}
 
-        for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) {
-            giles_rhs[i] = double(i);
-        }
 
+        
         // simple tensor rhs
 
         simple_template_tensor<width, depth> simple_rhs;
@@ -93,6 +87,15 @@ protected:
         for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) {
             simple_rhs[i] = double(i);
         }
+
+        // giles tensor rhs
+        //
+        giles_template_tensor<width, depth> giles_rhs(simple_rhs);
+
+        //for (size_t i = 0; i < tensor_alg_size(width, depth); ++i) {
+        //    giles_rhs[i] = double(i);
+        //}
+
 
         // ------- Multipy -------- //
 
@@ -188,15 +191,16 @@ protected:
         simple_template_tensor<width, depth> &simple_result
         )
     {
-        giles_template_tensor<width, depth> giles_lhs;
-        giles_template_tensor<width, depth> giles_rhs;
+
         simple_template_tensor<width, depth> simple_lhs;
         simple_template_tensor<width, depth> simple_rhs;
 
-        giles_lhs[tensor_alg_size(width, lhs_degree-1)] = 1.0;
         simple_lhs[tensor_alg_size(width, lhs_degree-1)] = 1.0;
-        giles_rhs[tensor_alg_size(width, rhs_degree-1)] = 1.0;
         simple_rhs[tensor_alg_size(width, rhs_degree-1)] = 1.0;
+        //giles_lhs[tensor_alg_size(width, lhs_degree-1)] = 1.0;
+        //giles_rhs[tensor_alg_size(width, rhs_degree-1)] = 1.0;
+        giles_template_tensor<width, depth> giles_lhs(simple_lhs);
+        giles_template_tensor<width, depth> giles_rhs(simple_rhs);
 
         giles_result = giles_lhs*giles_rhs;
         simple_result = simple_lhs*simple_rhs;
