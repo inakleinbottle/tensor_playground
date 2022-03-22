@@ -304,8 +304,8 @@ TEST_F(GilesTensorTilingTests, OneThreeFromSimpleTensorTest)
 
 TEST_F(GilesTensorTilingTests, TwoTwoFromSimpleTensorTest)
 {
-    // lhs = {0 1{1} 0 ... 0}
-    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // lhs = {0 ... 0 1{11} 0 ... 0}
+    // rhs = {0 ... 0 1{11} 0 ... 0}
     // ans = {0 ... 0 1{1111} 0 ... 0}
 
     simple_template_tensor<width, depth> simple_lhs;
@@ -328,8 +328,8 @@ TEST_F(GilesTensorTilingTests, TwoTwoFromSimpleTensorTest)
 
 TEST_F(GilesTensorTilingTests, ThreeOneFromSimpleTensorTest)
 {
-    // lhs = {0 1{1} 0 ... 0}
-    // rhs = {0 ... 0 1{111} 0 ... 0}
+    // lhs = {0 ... 0 1{111} 0 ... 0}
+    // rhs = {0 1{1} 0 ... 0}
     // ans = {0 ... 0 1{1111} 0 ... 0}
 
     simple_template_tensor<width, depth> simple_lhs;
